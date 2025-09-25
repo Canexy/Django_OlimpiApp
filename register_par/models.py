@@ -9,7 +9,7 @@ class Equipos(models.Model):
     ]
     
     idEqu = models.AutoField(primary_key=True)
-    nomEqu = models.CharField(max_length=25, verbose_name='Nombre del equipo.')
+    nomEqu = models.CharField(max_length=25, verbose_name='Nombre del equipo:')
     oliEqu = models.CharField(max_length=1, choices=OPCIONES_SN, verbose_name='¿Es olímpico?')
     
     class Meta:
@@ -30,7 +30,7 @@ class Equipos(models.Model):
 
 class Disciplinas(models.Model):
     idDis = models.AutoField(primary_key=True)
-    nomDis = models.CharField(max_length=50, verbose_name='Nombre de la disciplina.')
+    nomDis = models.CharField(max_length=50, verbose_name='Nombre de la disciplina:')
     
     class Meta:
         db_table = 'DISCIPLINAS'
@@ -49,7 +49,7 @@ class Pistas(models.Model):
     ]
     
     idPis = models.AutoField(primary_key=True)
-    nomPis = models.CharField(max_length=25, verbose_name='Nombre de la pista.')
+    nomPis = models.CharField(max_length=25, verbose_name='Nombre de la pista:')
     cubPis = models.CharField(max_length=1, choices=OPCIONES_SN, verbose_name='¿Está cubierta?')
     
     class Meta:
@@ -70,9 +70,9 @@ class Pistas(models.Model):
 
 class Arbitros(models.Model):
     idArb = models.AutoField(primary_key=True)
-    nomArb = models.CharField(max_length=50, verbose_name='Nombre del árbitro.')
-    telArb = models.CharField(max_length=9, verbose_name='Teléfono del árbitro.')
-    conArb = models.EmailField(max_length=75, verbose_name='Contacto del árbitro.')
+    nomArb = models.CharField(max_length=50, verbose_name='Nombre completo:')
+    telArb = models.CharField(max_length=9, verbose_name='Teléfono de contacto:')
+    conArb = models.EmailField(max_length=75, verbose_name='Correo de contacto:')
     
     class Meta:
         db_table = 'ARBITROS'
@@ -86,11 +86,11 @@ class Arbitros(models.Model):
 
 class Participantes(models.Model):
     idPar = models.AutoField(primary_key=True)
-    curPar = models.CharField(max_length=5, verbose_name='Curso del participante.')
-    fecPar = models.DateField(verbose_name='Fecha de nacimiento del participante.')
-    nomPar = models.CharField(max_length=75, verbose_name='Nombre del participante.')
-    telPar = models.CharField(max_length=9, verbose_name='Teléfono del participante.')
-    conPar = models.EmailField(max_length=75, verbose_name='Contacto del participante.')
+    nomPar = models.CharField(max_length=75, verbose_name='Nombre completo:')
+    fecPar = models.DateField(verbose_name='Fecha de nacimiento:')
+    curPar = models.CharField(max_length=5, verbose_name='Curso:')
+    telPar = models.CharField(max_length=9, verbose_name='Teléfono de contacto:')
+    conPar = models.EmailField(max_length=75, verbose_name='Correo de contacto:')
     equipo = models.ForeignKey(Equipos, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Equipo al que pertenece')
 
     class Meta:
@@ -105,12 +105,12 @@ class Participantes(models.Model):
 
 class Encuentros(models.Model):
     idEnc = models.AutoField(primary_key=True)
-    finiEnc = models.DateTimeField(verbose_name='Fecha de inicio.')
-    ffinEnc = models.DateTimeField(verbose_name='Fecha de fin.')
-    idPis = models.ForeignKey(Pistas, on_delete=models.CASCADE, verbose_name='Pista')
-    idDis = models.ForeignKey(Disciplinas, on_delete=models.CASCADE, verbose_name='Disciplina')
-    arbitro = models.ForeignKey(Arbitros, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Árbitro del encuentro')
-    equipos = models.ManyToManyField(Equipos, through='EncuentroEquipo',verbose_name='Equipos participantes')
+    idDis = models.ForeignKey(Disciplinas, on_delete=models.CASCADE, verbose_name='Disciplina:')
+    finiEnc = models.DateTimeField(verbose_name='Fecha de inicio:')
+    ffinEnc = models.DateTimeField(verbose_name='Fecha de fin:')
+    idPis = models.ForeignKey(Pistas, on_delete=models.CASCADE, verbose_name='Pista:')
+    arbitro = models.ForeignKey(Arbitros, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Árbitro asociado:')
+    equipos = models.ManyToManyField(Equipos, through='EncuentroEquipo',verbose_name='Equipos participantes:')
     
     class Meta:
         db_table = 'ENCUENTROS'
@@ -136,7 +136,7 @@ class EncuentroEquipo(models.Model):
     
     encuentro = models.ForeignKey(Encuentros, on_delete=models.CASCADE)
     equipo = models.ForeignKey(Equipos, on_delete=models.CASCADE)
-    rol = models.CharField(max_length=1, choices=ROLES_EQUIPO, verbose_name='Rol del equipo')
+    rol = models.CharField(max_length=1, choices=ROLES_EQUIPO, verbose_name='Rol del equipo:')
     
     class Meta:
         db_table = 'ENCUENTRO_EQUIPO'
