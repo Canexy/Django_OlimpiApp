@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.exceptions import ValidationError
 
 # Class 'Equipos'.
 
@@ -31,6 +32,10 @@ class Equipos(models.Model):
 class Disciplinas(models.Model):
     idDis = models.AutoField(primary_key=True)
     nomDis = models.CharField(max_length=50, verbose_name='Nombre de la disciplina:')
+    min_equipos = models.PositiveIntegerField(default=2, verbose_name='Mínimo de equipos por encuentro:')
+    max_equipos = models.PositiveIntegerField(default=2, verbose_name='Máximo de equipos por encuentro:')
+    min_participantes_por_equipo = models.PositiveIntegerField(default=1, verbose_name='Mínimo de participantes por equipo:')
+    max_participantes_por_equipo = models.PositiveIntegerField(default=10, verbose_name='Máximo de participantes por equipo:')
     
     class Meta:
         db_table = 'DISCIPLINAS'
@@ -39,6 +44,10 @@ class Disciplinas(models.Model):
     
     def __str__(self):
         return self.nomDis
+    
+    def puede_agregar_mas_equipos(self, encuentro):
+        """Verifica si se pueden agregar más equipos al encuentro"""
+        return encuentro.equipos.count() < self.max_equipos
     
 # Class 'Pistas'.
 
@@ -125,6 +134,36 @@ class Encuentros(models.Model):
     
     def __str__(self):
         return f"Encuentro {self.idEnc} - {self.idDis}"
+    
+    def clean(self):
+        """Valida que el encuentro cumple las reglas de su disciplina"""
+        super().clean()
+        
+        # Solo validar si ya tiene disciplina asignada
+        if self.idDis and self.pk:  # self.pk significa que ya existe en BD
+            equipos_count = self.equipos.count()
+            
+            # Validar número de equipos
+            if not (self.idDis.min_equipos <= equipos_count <= self.idDis.max_equipos):
+                raise ValidationError({
+                    'equipos': f"Esta disciplina requiere entre {self.idDis.min_equipos} y {self.idDis.max_equipos} equipos. Actual: {equipos_count}"
+                })
+            
+            # Validar participantes por equipo (OPCIONAL - según necesidad)
+            for equipo in self.equipos.all():
+                participantes_count = equipo.participantes_set.count()
+                if participantes_count < self.idDis.min_participantes_por_equipo:
+                    raise ValidationError(
+                        f"El equipo {equipo.nomEqu} tiene muy pocos participantes "
+                        f"({participantes_count}). Mínimo requerido: {self.idDis.min_participantes_por_equipo}"
+                    )
+    
+    def save(self, *args, **kwargs):
+        """Ejecuta validación al guardar"""
+        self.clean()
+        super().save(*args, **kwargs)
+
+    
     
 # Class Intermedia 'EncuentroEquipo'.
 
