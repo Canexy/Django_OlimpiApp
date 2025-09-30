@@ -257,3 +257,186 @@ signals.py: Asegura validación en casos especiales
 
 ¿Quieres que te muestre el código completo integrado de estas partes?
 
+# Mi contestación:
+
+Vale, ten en cuenta las 5 ideas que me has dado que hay futuro de implementar, pero con un cambio...
+
+Veo mejor que a la hora de añadir disciplina, se imponga en el mismo models.py todos los campos de ConfiguraciónDisciplina, puesto que para este hace falta poner una disciplina existente. No tiene sentido separar ambas, no?
+
+Si estás de acuerdo con lo que he dicho, revisa las 5 ideas anteriores y aplica este cambio, dame el código e todo y explicalo
+
+# Su contestación:
+
+Tienes razón absoluta. Es mucho más lógico integrar la configuración directamente en el modelo Disciplinas. Vamos a refactorizar las ideas:
+
+🔄 Ideas Refactorizadas - Configuración Integrada
+1. Disciplinas con Configuración Integrada (MODIFICADO)
+python
+# Class 'Disciplinas' (o deportes).
+
+class Disciplinas(models.Model):
+    idDis = models.AutoField(primary_key=True)
+    nomDis = models.CharField(max_length=50, verbose_name='Nombre de la disciplina:')
+    # NUEVOS CAMPOS DE CONFIGURACIÓN
+    min_equipos = models.PositiveIntegerField(
+        default=2, 
+        verbose_name='Mínimo de equipos por encuentro:'
+    )
+    max_equipos = models.PositiveIntegerField(
+        default=2, 
+        verbose_name='Máximo de equipos por encuentro:'
+    )
+    min_participantes_por_equipo = models.PositiveIntegerField(
+        default=1, 
+        verbose_name='Mínimo de participantes por equipo:'
+    )
+    max_participantes_por_equipo = models.PositiveIntegerField(
+        default=10, 
+        verbose_name='Máximo de participantes por equipo:'
+    )
+    
+    class Meta:
+        db_table = 'DISCIPLINAS'
+        verbose_name = 'Disciplina'
+        verbose_name_plural = 'Disciplinas'
+    
+    def __str__(self):
+        return self.nomDis
+    
+    # MÉTODO HELPER
+    def puede_agregar_mas_equipos(self, encuentro):
+        """Verifica si se pueden agregar más equipos al encuentro"""
+        return encuentro.equipos.count() < self.max_equipos
+2. Inline Personalizado en Admin (IGUAL pero más simple)
+python
+# En admin.py
+from django.contrib import admin
+from .models import Encuentros, EncuentroEquipo
+
+class EncuentroEquipoInline(admin.TabularInline):
+    model = EncuentroEquipo
+    extra = 2  # Muestra 2 slots para equipos por defecto
+    max_num = 10  # Límite visual para evitar interfaz desbordada
+
+@admin.register(Encuentros)
+class EncuentrosAdmin(admin.ModelAdmin):
+    inlines = [EncuentroEquipoInline]
+    # El resto de tu configuración admin normal...
+3. Validación Inteligente Mejorada (MÁS SIMPLE)
+python
+# En clase Encuentros (models.py)
+from django.core.exceptions import ValidationError
+
+class Encuentros(models.Model):
+    # ... tus campos existentes sin cambios ...
+    
+    def clean(self):
+        """Valida que el encuentro cumple las reglas de su disciplina"""
+        super().clean()
+        
+        # Solo validar si ya tiene disciplina asignada
+        if self.idDis and self.pk:  # self.pk significa que ya existe en BD
+            equipos_count = self.equipos.count()
+            
+            # Validar número de equipos
+            if not (self.idDis.min_equipos <= equipos_count <= self.idDis.max_equipos):
+                raise ValidationError({
+                    'equipos': f"Esta disciplina requiere entre {self.idDis.min_equipos} y {self.idDis.max_equipos} equipos. Actual: {equipos_count}"
+                })
+            
+            # Validar participantes por equipo (OPCIONAL - según necesidad)
+            for equipo in self.equipos.all():
+                participantes_count = equipo.participantes_set.count()
+                if participantes_count < self.idDis.min_participantes_por_equipo:
+                    raise ValidationError(
+                        f"El equipo {equipo.nomEqu} tiene muy pocos participantes "
+                        f"({participantes_count}). Mínimo requerido: {self.idDis.min_participantes_por_equipo}"
+                    )
+    
+    def save(self, *args, **kwargs):
+        """Ejecuta validación al guardar"""
+        self.clean()
+        super().save(*args, **kwargs)
+4. Señales para Validación Automática (IGUAL pero más necesaria)
+python
+# En signals.py (crear archivo nuevo en tu app)
+from django.db.models.signals import m2m_changed
+from django.dispatch import receiver
+from django.core.exceptions import ValidationError
+from .models import Encuentros
+
+@receiver(m2m_changed, sender=Encuentros.equipos.through)
+def validar_equipos_encuentro(sender, instance, action, **kwargs):
+    """
+    Valida CUANDO SE MODIFICAN los equipos de un encuentro
+    Esto cubre casos donde se añaden/eliminan equipos después de creado el encuentro
+    """
+    if action in ["pre_add", "pre_remove"]:
+        # Validar ANTES de que los cambios se apliquen
+        if instance.idDis:
+            nuevos_equipos_count = instance.equipos.count()
+            
+            if action == "pre_add":
+                nuevos_equipos_count += len(kwargs['pk_set'])  # Equipos que se añadirán
+            elif action == "pre_remove":
+                nuevos_equipos_count -= len(kwargs['pk_set'])  # Equipos que se eliminarán
+            
+            # Validar contra los límites de la disciplina
+            if not (instance.idDis.min_equipos <= nuevos_equipos_count <= instance.idDis.max_equipos):
+                raise ValidationError(
+                    f"No se pueden tener {nuevos_equipos_count} equipos. "
+                    f"Límites: {instance.idDis.min_equipos}-{instance.idDis.max_equipos}"
+                )
+5. Configuración en apps.py para Señales (NUEVO)
+python
+# En apps.py de tu aplicación
+from django.apps import AppConfig
+
+class TuAppConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'tu_app'  # Cambia por el nombre real de tu app
+
+    def ready(self):
+        # Importa e registra las señales
+        import tu_app.signals  # Cambia por el nombre real de tu app
+NO OLVIDES: En __init__.py de tu app:
+
+python
+default_app_config = 'tu_app.apps.TuAppConfig'  # Cambia por tu ruta real
+🎯 Cómo Funciona Ahora - Flujo Completo
+Ejemplo de Uso:
+python
+# 1. Creas disciplinas con sus configuraciones
+futbol = Disciplinas.objects.create(
+    nomDis="Fútbol Base",
+    min_equipos=2,
+    max_equipos=2,
+    min_participantes_por_equipo=5,
+    max_participantes_por_equipo=5
+)
+
+baloncesto = Disciplinas.objects.create(
+    nomDis="Baloncesto", 
+    min_equipos=2,
+    max_equipos=2,
+    min_participantes_por_equipo=3,
+    max_participantes_por_equipo=5
+)
+
+# 2. Cuando creas un encuentro de fútbol, AUTOMÁTICAMENTE:
+# - Solo podrás asignar exactamente 2 equipos
+# - Cada equipo debe tener exactamente 5 participantes
+# - La interfaz admin te mostrará 2 slots para equipos
+# - Si intentas añadir un 3er equipo, fallará la validación
+✅ Ventajas de Este Enfoque Integrado:
+Más Simple: Un solo modelo en lugar de dos relacionados
+
+Más Intuitivo: La configuración está donde lógicamente pertenece
+
+Menos Consultas BD: No necesita relación extra
+
+Más Fácil de Mantener: Todo en un lugar
+
+Igual de Escalable: Nuevas disciplinas = nuevos registros con su configuración
+
+¿Necesitas que ajuste alguna parte específica o quieres que proceda con la implementación paso a paso?
