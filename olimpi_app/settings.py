@@ -26,6 +26,8 @@ SECRET_KEY = 'django-insecure-5rl8yxb!#rh*ohpe-3hz($#9riec0xd=eq^ugwh=+_5aumw4l8
 DEBUG = True
 
 ALLOWED_HOSTS = []
+# `*` para todos los hosts.
+# Además, hacer python manage.py runserver 0.0.0.0:8000
 
 
 # Application definition
