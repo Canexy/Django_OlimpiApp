@@ -1,0 +1,14 @@
+¿Existe actualmente un campo o estado que indique si un encuentro está "confirmado", "en progreso" o "finalizado"? 
+¿O todos los encuentros se consideran definitivos una vez creados?
+
+¿Quieres que:
+
+❌ No se pueda modificar equipos/participantes de encuentros existentes
+⚠️ Se pueda modificar pero con validaciones que prevengan estados inválidos
+🔄 Algo intermedio (ej: solo admin puede modificar, con advertencias)
+
+¿Los encuentros tienen estados diferentes o todos son iguales?
+
+¿Qué tan frecuentes son las modificaciones de participantes entre equipos?
+
+¿Prefieres prevenir completamente o mostrar advertencias?
