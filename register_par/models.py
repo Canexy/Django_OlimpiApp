@@ -1,6 +1,5 @@
 from django.db import models
-
-# Class 'Equipos'.
+from django.core.exceptions import ValidationError
 
 class Equipos(models.Model):
     OPCIONES_SN = [
@@ -26,11 +25,13 @@ class Equipos(models.Model):
     def __str__(self):
         return self.nomEqu
     
-# Class 'Disciplinas' (o deportes).
-
 class Disciplinas(models.Model):
     idDis = models.AutoField(primary_key=True)
     nomDis = models.CharField(max_length=50, verbose_name='Nombre de la disciplina:')
+    min_equipos = models.PositiveIntegerField(default=1, verbose_name='Mínimo de equipos por encuentro:')
+    max_equipos = models.PositiveIntegerField(default=10, verbose_name='Máximo de equipos por encuentro:')
+    min_participantes_por_equipo = models.PositiveIntegerField(default=1, verbose_name='Mínimo de participantes por equipo:')
+    max_participantes_por_equipo = models.PositiveIntegerField(default=10, verbose_name='Máximo de participantes por equipo:')
     
     class Meta:
         db_table = 'DISCIPLINAS'
@@ -40,8 +41,6 @@ class Disciplinas(models.Model):
     def __str__(self):
         return self.nomDis
     
-# Class 'Pistas'.
-
 class Pistas(models.Model):
     OPCIONES_SN = [
         ('S', 'Sí'),
@@ -65,8 +64,6 @@ class Pistas(models.Model):
     
     def __str__(self):
         return self.nomPis
-    
-# Class 'Árbitros'.
 
 class Arbitros(models.Model):
     idArb = models.AutoField(primary_key=True)
@@ -81,8 +78,6 @@ class Arbitros(models.Model):
     
     def __str__(self):
         return self.nomArb
-    
-# Class 'Participantes'.
 
 class Participantes(models.Model):
     idPar = models.AutoField(primary_key=True)
@@ -100,8 +95,6 @@ class Participantes(models.Model):
     
     def __str__(self):
         return f"{self.nomPar} ({self.curPar})"
-    
-# Class 'Encuentros'.
 
 class Encuentros(models.Model):
     idEnc = models.AutoField(primary_key=True)
@@ -110,7 +103,7 @@ class Encuentros(models.Model):
     ffinEnc = models.DateTimeField(verbose_name='Fecha de fin:')
     idPis = models.ForeignKey(Pistas, on_delete=models.CASCADE, verbose_name='Pista:')
     arbitro = models.ForeignKey(Arbitros, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Árbitro asociado:')
-    equipos = models.ManyToManyField(Equipos, through='EncuentroEquipo',verbose_name='Equipos participantes:')
+    equipos = models.ManyToManyField(Equipos, through='EncuentroEquipo', verbose_name='Equipos participantes:')
     
     class Meta:
         db_table = 'ENCUENTROS'
@@ -126,7 +119,47 @@ class Encuentros(models.Model):
     def __str__(self):
         return f"Encuentro {self.idEnc} - {self.idDis}"
     
-# Class Intermedia 'EncuentroEquipo'.
+    def clean(self):
+        """Solo validación básica de campos directos"""
+        super().clean()
+        
+        if self.finiEnc and self.ffinEnc and self.ffinEnc <= self.finiEnc:
+            raise ValidationError({
+                'ffinEnc': 'La fecha de fin debe ser posterior a la fecha de inicio.'
+            })
+    
+    def es_valido_para_disciplina(self):
+        """
+        Valida si el encuentro cumple todas las reglas de su disciplina
+        Retorna: (booleano, lista_de_errores)
+        """
+        errors = []
+        
+        if not self.idDis:
+            return False, ["No tiene disciplina asignada"]
+        
+        # Validar número de equipos
+        equipos_count = self.equipos.count()
+        if not (self.idDis.min_equipos <= equipos_count <= self.idDis.max_equipos):
+            errors.append(
+                f"Requiere entre {self.idDis.min_equipos} y {self.idDis.max_equipos} equipos. "
+                f"Tiene {equipos_count}."
+            )
+        
+        # Validar participantes por equipo
+        if equipos_count > 0:
+            from django.db.models import Count
+            equipos_con_conteo = self.equipos.annotate(
+                num_participantes=Count('participantes')
+            )
+            for equipo in equipos_con_conteo:
+                if equipo.num_participantes < self.idDis.min_participantes_por_equipo:
+                    errors.append(
+                        f"El equipo '{equipo.nomEqu}' tiene {equipo.num_participantes} participantes. "
+                        f"Mínimo: {self.idDis.min_participantes_por_equipo}"
+                    )
+        
+        return len(errors) == 0, errors
 
 class EncuentroEquipo(models.Model):
     ROLES_EQUIPO = [
