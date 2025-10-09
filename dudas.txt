@@ -1,14 +1,31 @@
-¿Existe actualmente un campo o estado que indique si un encuentro está "confirmado", "en progreso" o "finalizado"? 
-¿O todos los encuentros se consideran definitivos una vez creados?
+# ¿Existe actualmente un campo o estado que indique si un encuentro está "confirmado", "en progreso" o "finalizado"? 
+# ¿O todos los encuentros se consideran definitivos una vez creados?
 
-¿Quieres que:
+· No diría que siempre es definitivo, ya que puede estar sujeto a cambios (no tiene que ser lo común). Cuando se cree un encuentro, con su fecha de inicio y su fecha de fin, en esa ventana de tiempo estará "en progreso", ya que realmente está sucediendo. Antes como es obvio estará "confimado", y cuando acabe estará "finalizado".
 
-❌ No se pueda modificar equipos/participantes de encuentros existentes
-⚠️ Se pueda modificar pero con validaciones que prevengan estados inválidos
-🔄 Algo intermedio (ej: solo admin puede modificar, con advertencias)
+· Esto que hablamos es de cara a /admin, a mi persona como administrador. Habrá una vista a futuros que sea de árbitro, siendo él el responsable de iniciar, finalizar y meter marcadores en tiempo real (o no, quizás al final). Esa vista deberá estar vinculada con esos estados que hemos hablado arriba.
 
-¿Los encuentros tienen estados diferentes o todos son iguales?
+# ¿Quieres que:
 
-¿Qué tan frecuentes son las modificaciones de participantes entre equipos?
+# ❌ No se pueda modificar equipos/participantes de encuentros existentes
+# ⚠️ Se pueda modificar pero con validaciones que prevengan estados inválidos
+# 🔄 Algo intermedio (ej: solo admin puede modificar, con advertencias)
+
+· Sobre las 3 opciones, digamos que a priori, lo mejor debe ser avisar antes del cambio (try/except en python) con un mensaje de advertencia y si, o dejar la eliminación en cascada y ampliarla (es decir, si borras un equipo, borras lo asociado a él, como por ejemplo el encuentro / no por eso, si borras a un sólo participante borras todo un equipo y a su vez un encuentro, sólo haces eso si el participante es el único de su equipo (el equipo se queda sin participantes)) o evitar la eliminación de estos si dependen o se usan en otro lado (integración). Valorar incluir triggers (si en Django de alguna forma o en el futuro uso de Postgres).
+
+# ¿Los encuentros tienen estados diferentes o todos son iguales?
+
+· Si hablamos de "en progreso, confirmado y finalizado", todos no tienen que tener el mismo estado. Pero en resumen, todos usan esos tres estados.
+
+# ¿Qué tan frecuentes son las modificaciones de participantes entre equipos?
+
+· En teoría, jugaremos con valores estables, no queremos abusar de hacer cambios (los hacemos ahora para hacer pruebas). En la práctica, deberán ser los más estables posibles para evitar eliminar encuentros, equipos, etc.
 
 ¿Prefieres prevenir completamente o mostrar advertencias?
+
+· Lo dicho arriba, hay que valorar ambas y ver qué es mejor y con qué mecanismo hacerlo.
+
+# Otros cambios:
+
+· Eliminar fecha de final de encuentro en la creación de los mismos. Que se rija por la duración de las disciplinas (¿posible nuevo campo dentro de disciplina?) y autocalcule el tiempo de finalización. Igual que dije al principio, en una futura vista, deberá ser el árbitro quien finalice el encuentro.
+Eliminar el estado Local/Visitante. En una futura creación de torneo con los equipos de cada disciplina, los primeros equipos de cada encuentro serán los "locales" y los segundos los "visitantes".
