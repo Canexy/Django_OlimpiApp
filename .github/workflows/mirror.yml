@@ -1,0 +1,19 @@
+name:  Mirror to GitLab
+
+on:
+  push:
+    branches: [main, testing]
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mirror to GitLab
+        run: |
+          # Clona el repo
+          git clone https://github.com/Canexy/Django_OlimpiApp.git .
+          # Configura GitLab
+          git remote add gitlab https://oauth2:${{ secrets.GITLAB_TOKEN }}@gitlab.com/Canexy/Django_OlimpiApp.git
+          # Push SOLO de la rama que activó el workflow
+          git push gitlab ${{ github.ref_name }}
+          echo "✅ Sincronizada rama ${{ github.ref_name }} a GitLab"
